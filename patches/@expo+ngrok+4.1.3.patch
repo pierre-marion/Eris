@@ -1,0 +1,63 @@
+diff --git a/node_modules/@expo/ngrok/src/client.js b/node_modules/@expo/ngrok/src/client.js
+index 3f748a3..1c28c52 100644
+--- a/node_modules/@expo/ngrok/src/client.js
++++ b/node_modules/@expo/ngrok/src/client.js
+@@ -27,6 +27,9 @@ class NgrokClient {
+         return await this.internalApi[method](path, { json: options }).json();
+       }
+     } catch (error) {
++      if (!error.response) {
++        throw error;
++      }
+       let clientError;
+       try {
+         const response = JSON.parse(error.response.body);
+diff --git a/node_modules/@expo/ngrok/src/process.js b/node_modules/@expo/ngrok/src/process.js
+index 0ab7407..e81ed2b 100644
+--- a/node_modules/@expo/ngrok/src/process.js
++++ b/node_modules/@expo/ngrok/src/process.js
+@@ -1,7 +1,29 @@
+ const { promisify } = require("util");
+-const { spawn, exec: execCallback } = require("child_process");
++const { spawn, exec: execCallback, execFileSync } = require("child_process");
+ const exec = promisify(execCallback);
+-const bin = require("@expo/ngrok-bin");
++
++// @expo/ngrok-bin bundles an ancient ngrok v2 binary (2.3.x) that modern ngrok
++// accounts reject with ERR_NGROK_121 ("agent version too old"). Prefer a real,
++// system-installed ngrok (v3+) when available, e.g. `brew install ngrok`.
++// `which`/`where` must skip node_modules/.bin shims (npx puts it first on PATH,
++// so it would otherwise shadow a real global install with the same ancient binary).
++function resolveBin() {
++  if (process.env.EXPO_NGROK_BIN) return process.env.EXPO_NGROK_BIN;
++  try {
++    const finder = process.platform === "win32" ? "where" : "which";
++    const candidates = execFileSync(finder, ["-a", "ngrok"], { stdio: ["ignore", "pipe", "ignore"] })
++      .toString()
++      .trim()
++      .split("\n")
++      .filter(Boolean);
++    const systemBin = candidates.find((p) => !p.includes("node_modules"));
++    if (systemBin) return systemBin;
++    throw new Error("no non-node_modules ngrok on PATH");
++  } catch (e) {
++    return require("@expo/ngrok-bin");
++  }
++}
++const bin = resolveBin();
+ 
+ const ready = /starting web service.*addr=(\d+\.\d+\.\d+\.\d+:\d+)/;
+ const inUse = /address already in use/;
+@@ -131,7 +153,11 @@ async function setAuthtoken(optsOrToken) {
+   const opts = isOpts ? optsOrToken : {};
+   const token = isOpts ? opts.authtoken : optsOrToken;
+ 
+-  const authtoken = ["authtoken", token];
++  // ngrok v3's CLI writes `version: "3"` configs via `config add-authtoken`;
++  // the legacy `authtoken` subcommand (v2) writes a bare `authtoken:` file
++  // that the v3 agent then refuses to load ("`version` property is required").
++  const isV3 = /\bversion\s+3\b/.test(execFileSync(bin, ["--version"]).toString());
++  const authtoken = isV3 ? ["config", "add-authtoken", token] : ["authtoken", token];
+   if (opts.configPath) authtoken.push("--config=" + opts.configPath);
+ 
+   const ngrok = spawn(bin, authtoken, { windowsHide: true });

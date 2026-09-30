@@ -4,22 +4,41 @@
     "slug": "Eris",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "eris",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#14131A",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sadnagsko.eris"
     },
     "android": {
+      "package": "com.sadnagsko.eris",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#0B0A0F",
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      "./plugins/withoutPushEntitlement",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f139c43a-5d1a-4ed6-bb68-ec368f5ca3b8"
+      }
+    },
+    "owner": "ouiiii",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f139c43a-5d1a-4ed6-bb68-ec368f5ca3b8"
     }
   }
 }
